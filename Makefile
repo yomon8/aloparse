@@ -1,0 +1,13 @@
+test: deps 
+	go test ./...
+
+deps:
+	go get -d -v -t ./...
+	go get github.com/golang/lint/golint
+
+lint: deps
+	go vet ./...
+	golint -set_exit_status ./...
+
+clean:
+	go clean
