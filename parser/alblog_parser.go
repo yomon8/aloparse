@@ -2,6 +2,7 @@ package parser
 
 import (
 	"errors"
+	"fmt"
 	"regexp"
 	"strings"
 	"time"
@@ -52,6 +53,12 @@ func NewALBLogParser() *ALBLogParser {
 
 // Parse log entry text
 func (a *ALBLogParser) Parse(line string) (*LogEntry, error) {
+	var (
+		domainName    string
+		chosenCertArn string
+		target        string
+		targetPort    string
+	)
 
 	reg := a.regexp.FindStringSubmatch(line)
 	if len(reg) < 6 {
@@ -63,13 +70,19 @@ func (a *ALBLogParser) Parse(line string) (*LogEntry, error) {
 		return nil, errors.New("time parse error")
 	}
 	c := strings.Split(s[3], ":")
+	if len(c) != 2 {
+		return nil, errors.New(fmt.Sprintf("invalid client:%#v", s[3]))
+	}
 	t := strings.Split(s[4], ":")
+	if len(t) == 2 {
+		target = t[0]
+		targetPort = t[1]
+	} else {
+		target = "-"
+		targetPort = "-"
+	}
 	r := strings.Split(reg[2], " ")
 	ssl := strings.Split(reg[4], " ")
-	var (
-		domainName    string
-		chosenCertArn string
-	)
 	if len(reg) == 7 {
 		d := strings.Split(reg[6], " ")
 		if len(d) == 3 {
@@ -83,8 +96,8 @@ func (a *ALBLogParser) Parse(line string) (*LogEntry, error) {
 		ALB:                    s[2],
 		Client:                 c[0],
 		ClientPort:             c[1],
-		Target:                 t[0],
-		TargetPort:             t[1],
+		Target:                 target,
+		TargetPort:             targetPort,
 		RequestProcessingTime:  s[5],
 		TargetProcessingTime:   s[6],
 		ResponseProcessingTime: s[7],
